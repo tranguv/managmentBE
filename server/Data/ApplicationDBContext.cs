@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using server.Models;
+using server.Configurations;
 namespace server.Data;
 
 public class ApplicationDBContext : DbContext
@@ -11,30 +12,31 @@ public class ApplicationDBContext : DbContext
 
     }
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product_Category>().HasKey(pc => new { pc.CategoryId, pc.ProductId });
+        new UserTypeConfiguration().Configure(modelBuilder.Entity<User>());
+    }
+
     public override int SaveChanges()
     {
         var entries = ChangeTracker
             .Entries()
-            .Where(e => e.Entity is DateTimeEntity && (
+            .Where(e =>
                     e.State == EntityState.Added
-                    || e.State == EntityState.Modified));
+                    || e.State == EntityState.Modified);
 
         foreach (var entityEntry in entries)
         {
-            ((DateTimeEntity)entityEntry.Entity).UpdatedDate = (DateTimeEntity)DateTime.Now;
+            entityEntry.Property("UpdatedDate").CurrentValue = DateTime.Now;
 
             if (entityEntry.State == EntityState.Added)
             {
-                ((DateTimeEntity)entityEntry.Entity).CreatedDate = (DateTimeEntity)DateTime.Now;
+                entityEntry.Property("CreatedDate").CurrentValue = DateTime.Now;
             }
         }
 
         return base.SaveChanges();
-    }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Product_Category>().HasKey(pc => new { pc.CategoryId, pc.ProductId });
     }
 
     public DbSet<User> Users { get; set; }

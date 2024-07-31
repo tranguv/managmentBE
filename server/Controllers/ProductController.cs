@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using server.Data;
 using server.Models;
 
@@ -35,16 +36,21 @@ namespace server.Controllers
         }
 
         [HttpPost]
-        public IActionResult Create([FromBody] Product product)
+        public async Task<ActionResult<Product>> CreateProduct([FromBody] Product product)
         {
-            _context.Products.Add(product);
+            await _context.Products.AddAsync(product);
             _context.SaveChanges();
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update([FromBody] Product product)
+        public async Task<IActionResult> UpdateProduct([FromRoute] int id, [FromBody] Product product)
         {
+            if (id != product.Id)
+            {
+                return BadRequest();
+            }
+
             // check if product exist
             var isValidProd = _context.Products.Find(product.Id);
 
@@ -58,6 +64,32 @@ namespace server.Controllers
             return NoContent();
         }
 
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteProduct([FromRoute] int id)
+        {
+            var product = await _context.Products.FindAsync(id);
 
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            _context.Products.Remove(product);
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BadRequest();
+            }
+            return NoContent();
+        }
+
+        private bool ProductExists(int id)
+        {
+            return _context.Products.Any(e => e.Id == id);
+        }
     }
 }
