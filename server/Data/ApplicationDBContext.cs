@@ -14,6 +14,14 @@ public class ApplicationDBContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var allEntities = modelBuilder.Model.GetEntityTypes();
+
+        foreach (var entity in allEntities)
+        {
+            entity.AddProperty("CreatedDate", typeof(DateTime));
+            entity.AddProperty("UpdatedDate", typeof(DateTime));
+        }
+
         modelBuilder.Entity<Product_Category>().HasKey(pc => new { pc.CategoryId, pc.ProductId });
         new UserTypeConfiguration().Configure(modelBuilder.Entity<User>());
     }
@@ -37,6 +45,27 @@ public class ApplicationDBContext : DbContext
         }
 
         return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = ChangeTracker
+            .Entries()
+            .Where(e =>
+                    e.State == EntityState.Added
+                    || e.State == EntityState.Modified);
+
+        foreach (var entityEntry in entries)
+        {
+            entityEntry.Property("UpdatedDate").CurrentValue = DateTime.Now;
+
+            if (entityEntry.State == EntityState.Added)
+            {
+                entityEntry.Property("CreatedDate").CurrentValue = DateTime.Now;
+            }
+        }
+
+        return base.SaveChangesAsync();
     }
 
     public DbSet<User> Users { get; set; }

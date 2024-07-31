@@ -59,8 +59,21 @@ namespace server.Controllers
                 return NotFound();
             }
 
-            _context.Products.Update(product);
-            _context.SaveChanges();
+            _context.Entry(product).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BadRequest();
+            }
+            catch (System.Exception)
+            {
+                throw;
+            }
+
             return NoContent();
         }
 
